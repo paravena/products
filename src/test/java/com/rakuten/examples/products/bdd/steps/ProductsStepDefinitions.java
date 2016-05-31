@@ -3,9 +3,6 @@ package com.rakuten.examples.products.bdd.steps;
 import com.rakuten.examples.products.ProductsApplication;
 import com.rakuten.examples.products.util.dto.ProductDTO;
 import cucumber.api.DataTable;
-import cucumber.api.PendingException;
-import cucumber.api.java.After;
-import cucumber.api.java.Before;
 import cucumber.api.java.en.And;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
@@ -49,16 +46,18 @@ public class ProductsStepDefinitions {
     @When("^I send a request for all products$")
     public void sendRequestForAllProducts() throws Throwable {
         products.stream().forEach(p -> {
-            HttpEntity<ProductDTO> requestEntity = new HttpEntity<>(p);
-            ResponseEntity<Map<String, String>> response = restTemplate.exchange(PRODUCT_URL,
-                    HttpMethod.POST, requestEntity, new ParameterizedTypeReference<Map<String, String>>() {});
+            HttpEntity<ProductDTO> requestEntity = new HttpEntity<>(p, createAuthenticationHttpHeaders());
+            ResponseEntity<ProductDTO> response = restTemplate.exchange(PRODUCT_URL,
+                    HttpMethod.POST, requestEntity, ProductDTO.class);
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
         });
     }
 
     @Then("^I retrieve following products:$")
     public void shouldRetrieveAllProducts(DataTable dataTable) throws Throwable {
-        ResponseEntity<ProductDTO[]> response = restTemplate.getForEntity(PRODUCT_URL, ProductDTO[].class);
+        HttpEntity<?> requestEntity = new HttpEntity<>(createAuthenticationHttpHeaders());
+        ResponseEntity<ProductDTO[]> response = restTemplate.exchange(PRODUCT_URL,
+                HttpMethod.GET, requestEntity, ProductDTO[].class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
@@ -74,7 +73,7 @@ public class ProductsStepDefinitions {
         HttpHeaders headers = new HttpHeaders();
         String token="admin".concat(":").concat("admin");
         headers.add("Authorization", "Basic " + new String(Base64.encodeBase64(token.getBytes())));
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         return headers;
     }
